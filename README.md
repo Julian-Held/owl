@@ -12,6 +12,25 @@ pip install owlspec
 
 For manual installation, you can also simply drop the `owlspec` folder in the folder where your script is located. However, you will still need to install the dependencies (numpy, scipy, mendeleev, astroquery, roman).
 
+### Downloading Stark profiles
+Before using the library for Stark broadening of the hydrogen Balmer series as well as helium 447/492 nm, you need to download the precalculated tables by Gigosos et al/Lara et al. 
+In case of the hydrogen Balmer series, the neccesary files are hosted by Elsevier only for private non-commercial use (see the [copyright notice](https://github.com/Julian-Held/owl/edit/master/README.md#copyright-notice-for-stark-broadening-tables) from the [publication](https://doi.org/10.1016/S0584-8547(03)00097-1)).
+
+Downloading the data tables for hydrogen Balmer Stark broadeing:
+``` python
+import owlspec as owl
+owl.gigosos_loader.download_profiles()
+```
+
+For the helium lines at 447 nm and 492 nm:
+
+``` python
+import owlspec as owl
+owl.gigosos_he_loader.download_profiles()
+```
+
+You can simply place these lines at the top of any script if you like: the files will not be re-downloaded if they are already there. If the files get corrupted and you want to redownload them, you can call the function with `redownload = True`.
+
 ## Capabilities
 The library has two core capabilities:
 1. Fetch information about transitions and levels from NIST.
@@ -97,11 +116,12 @@ The following examples show most of what owl is currently capable of. All exampl
 import numpy as np
 import matplotlib.pyplot as plt
 import owlspec as owl
+owl.gigosos_loader.download_profiles() # Download data tables if neccesary
 
 cw = central_wavelength = 486
 x = np.linspace(cw-4, cw+6.5, 3000)
 
-transition1 = owl.emitter.transition("H I", cw)# Hydrogen atom emission, H beta
+transition1 = owl.emitter.transition("H I", cw) # Hydrogen atom emission, H beta
 # H I emitters are 1000 K hot, and sourrounded by argon neutrals and ions 
 # and 30000 K hot electrons
 line1 = owl.emission_line(transition1, cw, pert="Ar I", T=1000, Te=30000)
@@ -204,6 +224,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import owlspec as owl
 import pyplas
+owl.gigosos_loader.download_profiles()
 
 n0 = 5e21 # Electron/Ion density
 electrons = pyplas.electrons(n0, T=35000) # 3 eV electrons
@@ -248,6 +269,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import owlspec as owl
 import pyplas
+owl.gigosos_loader.download_profiles()
 
 n0 = 5e20 # Electron/Ion density
 electrons = pyplas.electrons(n0, T=35000) # 3 eV electrons
@@ -290,6 +312,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import owlspec as owl
 import pyplas
+owl.gigosos_loader.download_profiles()
 
 n0 = 5e20 # Electron/Ion density
 electrons = pyplas.electrons(n0, T=35000) # 3 eV electrons
@@ -391,5 +414,12 @@ The library relies on data from the NIST atomic spectra database, which can be c
 Up to date citation information for NIST ASD is provided here: https://physics.nist.gov/PhysRefData/ASD/Html/verhist.shtml
 
 When using owl for line broadening calculations, please make sure to cite the sources of the underlying data listed in this readme. 
+
+
+## Copyright notice for Stark broadening tables
+The Stark broadening tables are distributed by Elsevier und the following copyright notice contained within the publication [Gigosos et al 2003 _Spectrochimica Acta Part B: Atomic Spectroscopy_ **58** 1489–504](https://doi.org/10.1016/S0584-8547(03)00097-1):
+
+_The data files are copyrighted by the authors(s). Readers of Spectrochimica Acta Electronica are permitted by the publisher Elsevier B.V., to copy the materialfor their own private, non-commercial use, and to run the programs according to the instructions provided by the authors. No charge for any copies may be requested, neither may the program or any modified version of it be sold or used for commercialpurposes. Those who wish to use the data files for commercial purposes should contact the corresponding author at the address given on the hardcopy paper._
+
 
 
