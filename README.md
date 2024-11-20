@@ -14,7 +14,7 @@ For manual installation, you can also simply drop the `owlspec` folder in the fo
 
 ### Downloading Stark profiles
 Before using the library for Stark broadening of the hydrogen Balmer series as well as helium 447/492 nm, you need to download the precalculated tables by Gigosos et al/Lara et al. 
-In case of the hydrogen Balmer series, the neccesary files are hosted by Elsevier only for private non-commercial use (see the [copyright notice](https://github.com/Julian-Held/owl/edit/master/README.md#copyright-notice-for-stark-broadening-tables) from the [publication](https://doi.org/10.1016/S0584-8547(03)00097-1)).
+In case of the hydrogen Balmer series, the neccesary files are hosted by Elsevier only for private non-commercial use (see the [copyright notice](https://github.com/Julian-Held/owl/blob/master/README.md#copyright-notice-for-stark-broadening-tables) from the [publication](https://doi.org/10.1016/S0584-8547(03)00097-1)).
 
 Downloading the data tables for hydrogen Balmer Stark broadeing:
 ``` python
