@@ -32,7 +32,7 @@ owl.gigosos_he_loader.download_profiles()
 You can simply place these lines at the top of any script if you like: the files will not be re-downloaded if they are already there. If the files get corrupted and you want to redownload them, you can call the function with `redownload = True`.
 
 ## Capabilities
-The library has two core capabilities:
+The library has three core capabilities:
 1. Fetch information about transitions and levels from NIST.
 2. Calculating the broadening of emission lines for a selection of cases.
 3. Calculating complete PLTE spectra.
