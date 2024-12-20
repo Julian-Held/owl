@@ -307,8 +307,7 @@ class emission_line():
             profile = convolve(profile, component, mode='same') * resolution
 
         y = A*profile
-        self.profiles['y'] = y
         lowres_y = np.interp(orig_x, x, y)
-        # normalize intensity to A
-        y = A*lowres_y/np.sum(lowres_y)/resolution
-        return y
+        self.profiles['y'] = A*y/np.sum(lowres_y)/resolution
+        
+        return A*lowres_y/np.sum(lowres_y)/resolution# normalize intensity to A
