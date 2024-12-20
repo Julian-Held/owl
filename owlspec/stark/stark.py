@@ -55,6 +55,14 @@ class stark():
                     gigosos_x = gigosos_x + middle_wl # to nm
                     y = interpol(gigosos_x,y,x)
                     return y
+                
+            if round(self.transition.wl, 0) == 434:
+                # Gigosos et al, Spectrochimica Acta Part B 58 (2003) 1489–1504
+                this_loader = gigosos_loader(self.transition)
+                gigosos_x,y = this_loader.load(ne, Te, pert)
+                gigosos_x = gigosos_x + middle_wl # to nm
+                y = interpol(gigosos_x,y,x)
+                return y
 
         ################ Helium ##########
         if ele == "He":
