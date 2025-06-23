@@ -118,6 +118,8 @@ class spectrum():
                     Aik = float(Aik)
                     gi = line['gi   gk'].split('-')[1]
                     Ei = line['Ei           Ek'].split('-')[1]
+                    Ei = re.sub(r'[^\d.]+', '', Ei)
+                    gi = re.sub(r'[^\d.]+', '', gi)
                     Ei = float(Ei)
                     gi = float(gi)
     
