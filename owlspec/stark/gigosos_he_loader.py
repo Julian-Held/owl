@@ -24,14 +24,15 @@ class gigosos_he_loader():
            os.path.exists(data_folder492+"/table06.txt") and redownload==False:
             return
         print("Downloading Stark broadening data tables for helium.")
-        URL447 = "https://cdsarc.u-strasbg.fr/ftp/J/A+A/503/293/tab.tar.gz"
+        URL447 = "http://cdsarc.u-strasbg.fr/ftp/J/A+A/503/293/tab.tar.gz"
         URL492 = "http://cdsarc.u-strasbg.fr/ftp/J/A+A/542/A75/tab.tar.gz"
         try:
             response = requests.get(URL447)
             zip_file447 = response.content
             response = requests.get(URL492)
             zip_file492 = response.content
-        except:
+        except Exception as e:
+            print(e)
             print("ERROR: could not download helium Stark broadening tables")
             
         try:
@@ -41,7 +42,8 @@ class gigosos_he_loader():
                 zip_ref.extractall(data_folder447)
             with tarfile.open(name=None, fileobj=BytesIO(zip_file492)) as zip_ref:
                 zip_ref.extractall(data_folder492)
-        except:
+        except Exception as e:
+            print(e)
             print("ERROR: could now save helium Stark broadening tables to disk")
             
 
