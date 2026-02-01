@@ -257,18 +257,18 @@ class emission_line():
         middle_wl = x[int(len(x)/2)-1]
         components = []
 
-        if (Doppler_on=='auto' and T) or Doppler_on==True:
+        if ((Doppler_on=='auto' and T) or Doppler_on==True) and not Doppler_on==False:
             maxwell = doppler_maxwell(x, middle_wl, T, self.m)
             self.profiles['Doppler'] = maxwell/np.max(maxwell)
             components.append(maxwell)
 
-        if (Stark_on=='auto' and ne) or Stark_on==True:
+        if ((Stark_on=='auto' and ne) or Stark_on==True) and not Stark_on==False:
             this_stark = stark.stark(self.transition)
             stark_profile = this_stark.get_profile(x, ne, Te, Stark_pert)
             self.profiles['Stark'] = stark_profile/np.max(stark_profile)
             components.append(stark_profile)
 
-        if (Zeeman_on=='auto' and B) or Zeeman_on==True:
+        if ((Zeeman_on=='auto' and B) or Zeeman_on==True) and not Zeeman_on==False:
             if not (B):
                 print('Missing magnetic field strength for Zeeman splitting. Skipping.')
             else:
@@ -280,7 +280,7 @@ class emission_line():
                 else:
                     print('Missing quantum numbers (J) or Lande G values for Zeeman splitting. Skipping.')
 
-        if (vdW_on=='auto' and vdW_pert) or vdW_on==True:
+        if ((vdW_on=='auto' and vdW_pert) or vdW_on==True) and not vdW_on==False:
             if not (vdW_pert.T and vdW_pert.n):
                 if vdW_on==True:
                     print('Missing perturber/neutral density and temperature for van der Waals broadening. Skipping.')
@@ -293,7 +293,7 @@ class emission_line():
 
         # We let the instrumental profile determine center position.
         # ALL other components are shifted to the middle!
-        if instr_func and (Instr_on=='auto' or Instr_on==True):
+        if (instr_func and (Instr_on=='auto' or Instr_on==True)) and not Instr_on==False:
             instrumental_profile = instr_func(x, wl+s)
         elif w and (Instr_on=='auto' or Instr_on==True):   
             instrumental_profile = psd_voigt(x, wl+s, w, mu)
