@@ -17,7 +17,7 @@ class griem():
             A,B,we,de = self.params_O777(Te)
             w = self.width(ne,Te,A,we)
             d = self.shift(ne,Te,A,we,de)
-        if ele == "Ar" and (round(wl, 3) == 810.369 or round(wl, 3) == 738.398):
+        elif ele == "Ar" and (round(wl, 3) == 810.369 or round(wl, 3) == 738.398):
             A,B,we,de = self.params_Ar8104(Te)
             w = self.width(ne,Te,A,we)
             d = self.shift(ne,Te,A,we,de)
