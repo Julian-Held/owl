@@ -94,7 +94,6 @@ class emission_line():
                     self.pert.T = T
 
             elif isinstance(pert, species) or isinstance(pert, perturber):
-                self.spec_name = get_spectroscopic_name(pert.name, pert.charge)
                 self.pert = pert
                 if T and not pert.T:
                     self.pert.T = T
