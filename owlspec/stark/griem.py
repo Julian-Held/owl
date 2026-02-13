@@ -13,7 +13,7 @@ class griem():
         ele = self.transition.emitter.symbol
         wl = self.transition.wl
 
-        if ele == "O" and round(wl, 0) == 777.:
+        if ele == "O" and (round(wl, 0) == 777. or round(wl, 0) == 778.):
             A,B,we,de = self.params_O777(Te)
             w = self.width(ne,Te,A,we)
             d = self.shift(ne,Te,A,we,de)
