@@ -3,6 +3,7 @@
 import numpy as np
 from ..util import *
 from scipy import constants as const
+from ..emitter.species import species, perturber
 
 class vdW():
     def __init__(self, transition, pert):
@@ -55,8 +56,11 @@ class vdW():
         El = self.transition.lowerE
         lu = self.transition.upperl
         ll = self.transition.lowerl
-        alpha = self.pert.element.dipole_polarizability*const.value('Bohr radius')**3
-                
+        if isinstance(self.pert, species) or isinstance(self.pert, perturber):
+            alpha = self.pert.dipole_polarizability*const.value('Bohr radius')**3
+        else:
+            alpha = self.pert.element.dipole_polarizability*const.value('Bohr radius')**3
+                            
         return self.get_width2(xc,m1,m2,T,n,Eion,Eu,El,lu,ll,alpha)
 
 
@@ -98,7 +102,11 @@ class vdW():
         m1 = self.transition.particle.m/const.u
         m2 = self.pert.m/const.u
         Eion = self.transition.particle.Ei
-        a = self.pert.element.dipole_polarizability*const.value('Bohr radius')**3
+
+        if isinstance(self.pert, species) or isinstance(self.pert, perturber):
+            a = self.pert.dipole_polarizability*const.value('Bohr radius')**3
+        else:
+            a = self.pert.element.dipole_polarizability*const.value('Bohr radius')**3
 
         if round(self.transition.wl, 0) == 656:
             H = self.transition.particle
