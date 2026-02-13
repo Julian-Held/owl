@@ -5,9 +5,9 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="owlspec",
-    version="0.3.1",
+    version="0.3.5",
     author="Julian Held",
-    author_email="julian.held@umn.edu",
+    author_email="j.held@tue.nl",
     license='MIT',
     platforms=['any'],
     description="Library for optical emission spectroscopy of low-temperature plasmas.",

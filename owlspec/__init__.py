@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from . import emitter
-from .util import *
+from . import util
 from .emission_line import *
 from .spectrum import *
 from .stark import gigosos_loader, gigosos_he_loader
