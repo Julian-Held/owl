@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="owlspec",
-    version="0.3.6",
+    version="0.3.7",
     author="Julian Held",
     author_email="j.held@tue.nl",
     license='MIT',
