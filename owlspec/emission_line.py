@@ -216,8 +216,9 @@ class emission_line():
             if plasma.neutrals:
                 vdW_pert = copy(plasma.neutrals)
         elif pert:
-            Stark_pert = vdW_pert = pert
-
+            Stark_pert = copy(pert)
+            vdW_pert = copy(pert)
+            
         if T and ng:
             if T and not vdW_pert.T:
                 vdW_pert.T = T
