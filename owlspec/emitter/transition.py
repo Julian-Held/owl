@@ -35,17 +35,11 @@ class transition():
             self.spec_name = get_spectroscopic_name(emitter.name, emitter.charge)
             self.charge = emitter.charge
             self.emitter = self.particle = emitter
-
-        # clean up the wl column from NIST levels (e.g. remove '[') below
-        non_decimal = re.compile(r'[^\d.]+')
-                
+               
         # Load data tables from NIST (+- 1 nm around requested wl)
         from ASDCache import SpectraCache
         nist_cache = SpectraCache()
         nist_lines = nist_cache.fetch(self.spec_name, wl_range=(wavelength-1, wavelength +1))  
-
-        # nist_lines = Nist.query((wavelength-1)*u.nm, (wavelength+1)*u.nm, 
-        #                         linename=self.spec_name, wavelength_type='vac+air')
         
         # select closest line
         wl = get_wl(nist_lines)
