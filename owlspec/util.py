@@ -21,8 +21,12 @@ __all__ = [
     "lorentz_function","lorentz",
     "psd_voigt_function","psd_voigt",
     "fft_smooth",
-    "deconv", "deconvolution"
+    "deconv", "deconvolution",
+    "get_wl",
+    "eV_in_wn",
     ]
+
+eV_in_wn = 8065.544  # express energy in eV
 
 def interpol(new_x, y, old_x):
     f = interpolate.interp1d(new_x, y, fill_value=0.0, bounds_error=False)
@@ -144,6 +148,21 @@ def deconv(signal, instr, noise_level):
                                          np.conj(H)/(H*np.conj(H) + lamb**2)))
     return np.roll(np.real(deconvolved), -1)
 
+def get_wl(nist_lines):
+    """ Get wavelength: try observed is possible, otherwise use Ritz values
+
+        Under 200 nm and above 2000 nm, use vacuum wavelengths instead of air wavelengths """
+
+    wl_vac = nist_lines['obs_wl_vac(nm)']
+    wl_vac[wl_vac.isna()] = nist_lines[wl_vac.isna()]['ritz_wl_vac(nm)']
+
+    wl = nist_lines['obs_wl_air(nm)']
+    wl[wl.isna()] = nist_lines[wl.isna()]['ritz_wl_air(nm)']
+
+    wl[wl_vac < 200] = wl_vac[wl_vac < 200]
+    wl[wl_vac > 2000] = wl_vac[wl_vac > 2000]
+
+    return wl
 
 # alias
 lorentz = lorentz_function

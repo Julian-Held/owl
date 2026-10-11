@@ -1,5 +1,6 @@
 #!/bin/python3
 import numpy as np
+import pandas as pd
 from .util import *
 import re
 import warnings
@@ -33,25 +34,26 @@ class spectrum():
             wl_low = self.wl_range[0]
             wl_high = self.wl_range[-1]
         else:
-            wl_low = 0
+            wl_low = 1
             wl_high = 9999
-            
+
         try:
-            from astroquery.nist import Nist
-            import astropy.units as u
-            nist_lines = Nist.query(wl_low*u.nm, wl_high*u.nm, 
-                                linename=self.spec_name, wavelength_type='vac+air')
+            from ASDCache import SpectraCache
+            nist_cache = SpectraCache()
+            nist_lines = nist_cache.fetch(self.spec_name, wl_range=(wl_low, wl_high))           
         except:
             return []
 
         return nist_lines
 
 
-    def get_spectrum(self, x, width=0.02, mu=0.2, min_int=-1, min_Aik=-1):
+    def get_spectrum(self, x, width=0.02, mu=0.2, norm=False, min_int=-1, min_Aik=-1):
         """ Return simulated spectrum. Lines are pseudo Voigt with
         the set width (FWHM) in nm and form parameter mu (0 = Gauss)  """
         nist_lines = self.get_linedata()
         spectrum = self.table_to_spec_rel(x, nist_lines, width, mu, min_int, min_Aik)
+        if norm == True and np.min(spectrum) > 0:
+            spectrum = spectrum/np.max(spectrum)
         return spectrum
 
 
@@ -64,102 +66,80 @@ class spectrum():
         """
         nist_lines = self.get_linedata()
         spectrum = self.table_to_spec_LTE(x, nist_lines, Te, width, mu, min_int, min_Aik)
-        if norm == True:
+        if norm == True and np.min(spectrum) > 0:
             spectrum = spectrum/np.max(spectrum)
         return spectrum
         
         
-    def get_ident_spectrum(self, min_int=-1, min_Aik=-1):
+    def get_ident_spectrum(self, min_int=-1, min_Aik=-1, norm=False):
         """ Return simulated spectrum. Marks the wavelenght position
         with thin lines. """
         nist_lines = self.get_linedata()
         x, y = self.table_to_ident(nist_lines, min_int, min_Aik)
+        if norm == True and len(y) > 0:
+            y = y/np.max(y)
         return x,y
 
 
-    def get_ident_spectrum_LTE(self, Te, min_int=-1, min_Aik=-1):
+    def get_ident_spectrum_LTE(self, Te, min_int=-1, min_Aik=-1, norm=False):
         """ Return simulated spectrum. Marks the wavelenght position
         with thin lines. """   
         nist_lines = self.get_linedata()
         x, y = self.table_to_ident_LTE(nist_lines, Te, min_int, min_Aik)
+        if norm == True and len(y) > 0:
+            y = y/np.max(y)
         return x,y
         
 
     def table_to_spec_LTE(self, x, nist_lines, Te, width=0.1, mu=0.5, min_int=-1, min_Aik=-1):
         spectrum = np.zeros(len(x))
-        for line in  nist_lines:   
-            c1 = str(line['Observed'])
-            # astroquery does not filter out headings in the middle of the table
-            if 'Observed' in c1 or "Wavelength" in c1 or "nm" in c1:
-                continue
-            
-            wl =  line['Observed']
-            Aik = line['Aki']
-            
-            if not np.ma.is_masked(wl) and not np.ma.is_masked(Aik):
-                
-                wl =  str(wl)
-                Aik = str(Aik)
-                wl = re.sub(r'[^\d.]+', '', wl) # removes non-number chars
-                # left/right strips non-number chars (preserves the 'e' in 5e7 
-                Aik = re.sub(r'(^[^\d.]+)|([^\d.]+$)', '', Aik) 
-                
-                if min_int > 0:
-                    with warnings.catch_warnings(): # ignore masked element warning
-                        warnings.simplefilter("ignore", category=UserWarning)
-                        rel_int = line['Rel.']
-                        rel_int = re.sub(r'[^\d.]+', '', rel_int)
-                        rel_int =  float(rel_int)
-                else:
-                    rel_int = 1
-    
-                try: # conversion to float can still fail...
-                    wl = float(wl)
-                    Aik = float(Aik)
-                    gi = line['gi   gk'].split('-')[1]
-                    Ei = line['Ei           Ek'].split('-')[1]
-                    Ei = re.sub(r'[^\d.]+', '', Ei)
-                    gi = re.sub(r'[^\d.]+', '', gi)
-                    Ei = float(Ei)
-                    gi = float(gi)
-    
-                    if rel_int > min_int and Aik > min_Aik:
-                        intensity = Aik*gi*np.exp(-Ei/Te)
-                        profile = intensity*psd_voigt_function(x, wl, width, mu)
-                        spectrum = spectrum + profile
-                except Exception as err:
-                    print(err)
-                    pass
+
+        wl = get_wl(nist_lines)
+        Aik = nist_lines['Aki(s^-1)']
+
+        if min_int > 0:
+            rel_int = nist_lines['intens']
+        else:
+            rel_int = 1
+
+        valid = (wl.notna()) & (Aik.notna()) & (rel_int > min_int) & (Aik > min_Aik)
+        # these_lines = lines[valid]
+
+        Aik = Aik[valid]
+        wl = wl[valid]
+        gi = nist_lines['g_k'][valid]
+        Ei = nist_lines['Ek(cm-1)'][valid]/eV_in_wn
+
+        intensity = Aik*gi*np.exp(-Ei/Te)
+        for this_wl, this_int in zip(wl, intensity):
+            profile = this_int*psd_voigt_function(x, this_wl, width, mu)
+            spectrum = spectrum + profile
     
         return spectrum
     
     
     def table_to_spec_rel(self, x, nist_lines, width=0.02, mu=0, min_int=-1, min_Aik=-1):
         spectrum = np.zeros(len(x))
-        for line in  nist_lines:   
-            rel_int = line['Rel.']
-            wl =  line['Observed']
-            if not np.ma.is_masked(rel_int) and not np.ma.is_masked(wl):
-                rel_int = str(rel_int) # is byte type initally
-                wl =  str(wl)
-                rel_int = re.sub(r'[^\d.]+', '', rel_int)
-                wl = re.sub(r'[^\d.]+', '', wl) # removes non-number chars
-                try: # conversion to float can still fail...
-                    rel_int = float(rel_int)
-                    wl = float(wl)
-                    if min_Aik > 0:
-                        with warnings.catch_warnings(): # ignore masked element warning
-                            warnings.simplefilter("ignore", category=UserWarning)
-                            Aik =  float(line['Aki'])
-                    else:
-                        Aik = 1
-                        
-                    if rel_int > min_int and Aik > min_Aik:
-                        profile = rel_int*psd_voigt_function(x, wl, width, mu)
-                        spectrum = spectrum + profile
-                except Exception as err:
-                    print(err)
-                    pass
+
+        wl = get_wl(nist_lines)
+        rel_int = nist_lines['intens']
+
+        if min_Aik > 0:
+            Aik = nist_lines['Aki(s^-1)']
+        else:
+            Aik = 1
+
+        valid = (wl.notna()) & (rel_int.notna()) & (rel_int > min_int) & (Aik > min_Aik)
+
+        if min_Aik > 0:
+            Aik = Aik[valid]
+
+        wl = wl[valid]
+        rel_int = rel_int[valid]
+
+        for this_wl, this_rel_int in zip(wl, rel_int):
+            profile = this_rel_int*psd_voigt_function(x, this_wl, width, mu)
+            spectrum = spectrum + profile
                 
         return spectrum
 
@@ -168,36 +148,27 @@ class spectrum():
         x = []
         dx = 1e-6
         y = []
-        for line in  nist_lines:   
-            rel_int = line['Rel.']
-            wl =  line['Observed']
-            if not np.ma.is_masked(rel_int) and not np.ma.is_masked(wl):
-                rel_int = str(rel_int) # is byte type initally
-                wl =  str(wl)
-                rel_int = re.sub(r'[^\d.]+', '', rel_int)
-                wl = re.sub(r'[^\d.]+', '', wl) # removes non-number chars
-                try: # conversion to float can still fail...
-                    rel_int = str(line['Rel.'])
-                    rel_int = re.sub(r'[^\d.]+', '', rel_int)
-                    rel_int =  float(rel_int)
-                    wl = float(wl)
-                    if min_Aik > 0:
-                        with warnings.catch_warnings(): # ignore masked element warning
-                            warnings.simplefilter("ignore", category=UserWarning)
-                            Aik =  float(line['Aki'])
-                    else:
-                        Aik = 1
-                        
-                    if rel_int > min_int and Aik > min_Aik:
-                        x.append(wl-dx)
-                        x.append(wl)
-                        x.append(wl+dx)
-                        y.append(0)
-                        y.append(rel_int)
-                        y.append(0)
-                        
-                except:
-                    pass
+
+        wl = get_wl(nist_lines)
+        rel_int = nist_lines['intens']
+
+        for idx, row in nist_lines.iterrows():
+            this_wl = wl.iloc[idx]
+            this_rel_int = rel_int.iloc[idx] 
+            if min_Aik > 0:
+                this_Aik = row['Aki(s^-1)']
+            else:
+                this_Aik = 1
+
+            if pd.notna(this_rel_int) and this_rel_int > min_int \
+                    and pd.notna(this_Aik) and this_Aik > min_Aik and pd.notna(this_wl):
+
+                x.append(this_wl-dx)
+                x.append(this_wl)
+                x.append(this_wl+dx)
+                y.append(0)
+                y.append(this_rel_int)
+                y.append(0)
             
         return np.array(x),np.array(y)  
     
@@ -206,52 +177,33 @@ class spectrum():
         x = []
         dx = 1e-6
         y = []
-        for line in  nist_lines:   
-            c1 = str(line['Observed'])
-            # astroquery does not filter out headings in the middle of the table
-            if 'Observed' in c1 or "Wavelength" in c1 or "nm" in c1:
-                continue
-            
-            wl =  line['Observed']
-            Aik = line['Aki']
-            
-            if not np.ma.is_masked(wl) and not np.ma.is_masked(Aik):
-                
-                wl =  str(wl)
-                Aik = str(Aik)
-                wl = re.sub(r'[^\d.]+', '', wl) # removes non-number chars
-                # left/right strips non-number chars (preserves the 'e' in 5e7 
-                Aik = re.sub(r'(^[^\d.]+)|([^\d.]+$)', '', Aik) 
-                
-                if min_int > 0:
-                    with warnings.catch_warnings(): # ignore masked element warning
-                        warnings.simplefilter("ignore", category=UserWarning)
-                        rel_int = str(line['Rel.'])
-                        rel_int = re.sub(r'[^\d.]+', '', rel_int)
-                        if len(rel_int) > 0:
-                            rel_int = float(rel_int)
-                        else:
-                            rel_int = 0
-                else:
-                    rel_int = 1
 
-                try: # conversion to float can still fail...
-                    wl = float(wl)
-                    Aik = float(Aik)
-                    gi = line['gi   gk'].split('-')[1]
-                    Ei = line['Ei           Ek'].split('-')[1]
-                    Ei = float(Ei)
-                    gi = float(gi)
-                    if rel_int > min_int and Aik > min_Aik:
-                        intensity = Aik*gi*np.exp(-Ei/Te)
-                        x.append(wl-dx)
-                        x.append(wl)
-                        x.append(wl+dx)
-                        y.append(0)
-                        y.append(intensity)
-                        y.append(0)
-                except:
-                    pass
+        wl = get_wl(nist_lines)
+        rel_int = nist_lines['intens']
+
+        for idx, row in nist_lines.iterrows():
+            this_wl = wl.iloc[idx]
+            this_rel_int = rel_int.iloc[idx] 
+            this_Aik = row['Aki(s^-1)']
+            this_gi = row['g_k']
+            this_Ei = row['Ek(cm-1)']/eV_in_wn
+
+            if min_int > 0:
+                this_rel_int = row['intens']
+            else:
+                this_rel_int = 1
+                
+            intensity = this_Aik*this_gi*np.exp(-this_Ei/Te)
+
+            if pd.notna(this_rel_int) and this_rel_int > min_int \
+                    and pd.notna(intensity) and pd.notna(this_wl):
+
+                x.append(this_wl-dx)
+                x.append(this_wl)
+                x.append(this_wl+dx)
+                y.append(0)
+                y.append(intensity)
+                y.append(0)
 
         return np.array(x),np.array(y)  
         
