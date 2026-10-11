@@ -11,6 +11,22 @@ from .emitter.species import species, perturber
 from .util import parse_spectroscopic_name, get_spectroscopic_name
 from copy import copy
 
+
+def _parse_pert(pert, T=None):
+    """Convert a spectroscopic name to a species; pass other objects through."""
+    if isinstance(pert, str):
+        name, charge = parse_spectroscopic_name(pert)
+        pert = species(name, charge*const.e)
+        if T:
+            pert.T = T
+    return pert
+
+
+def _enabled(flag, available):
+    """Resolve a True/False/'auto' switch given whether 'auto' may enable it."""
+    return bool(available) if flag == 'auto' else bool(flag)
+
+
 class emission_line():
     def __init__(self, transition, wl, plasma=None, instr_func = None, w = None, mu = 0.0,
                  T = None, B = None, ne = None, Te = None, ng = None, pert = None, 
@@ -79,28 +95,18 @@ class emission_line():
         self.m  = particle.m
         self.Ei = particle.Ei
         self.T, self.B, self.ne, self.Te, self.ng  = T, B, ne, Te, ng
-        self.pert = pert
+        self.pert = _parse_pert(pert, T)
         self.Instr_on, self.Doppler_on = Instr_on, Doppler_on
         self.Zeeman_on, self.vdW_on, self.Stark_on = Zeeman_on, vdW_on, Stark_on
 
         self.profiles = dict.fromkeys(['Doppler', 'Zeeman', 'Stark', 'vdW', 'instrument'])
 
-
-        if pert:    
-            if isinstance(pert, str):
-                name, charge = parse_spectroscopic_name(pert)
-                self.pert = species(name, charge*const.e)
-                if T:
-                    self.pert.T = T
-
-            elif isinstance(pert, species) or isinstance(pert, perturber):
-                self.pert = pert
-                if T and not pert.T:
-                    self.pert.T = T
+        if isinstance(pert, (species, perturber)) and T and not pert.T:
+            pert.T = T
 
 
     def get_profile(self, x, A = 1,  wl=None, plasma=None, instr_func = None, 
-                    w = None, mu = 0.0, T = None, B = None, ne = None, 
+                    w = None, mu = None, T = None, B = None, ne = None, 
                     Te = None, ng = None, pert = None,
                  Instr_on=None, Doppler_on=None, Stark_on=None, Zeeman_on=None, 
                  vdW_on=None):
@@ -153,49 +159,28 @@ class emission_line():
         to 'auto' which automatically enables calculation if possible.
         """
 
-        if wl == None and self.wl:
-            wl = self.wl
-        if plasma == None and self.plasma:
-            plasma = self.plasma
-        if instr_func == None and self.instr:
-            instr_func = self.instr
-        if w == None and self.w:
-            w = self.w
-        if mu == None and self.mu:
-            mu = self.mu
-        if T == None and self.T:
-            T = self.T
-        if B == None and self.B:
-            B = self.B
-        if ne == None and self.ne:
-            ne = self.ne
-        if Te == None and self.Te:
-            Te = self.Te
-        if ng == None and self.ng:
-            ng = self.ng
-        if Instr_on == None and self.Instr_on:
-            Instr_on = self.Instr_on
-        if Doppler_on == None and self.Doppler_on:
-            Doppler_on = self.Doppler_on  
-        if Stark_on == None and self.Stark_on:
-            Stark_on = self.Stark_on   
-        if Zeeman_on == None and self.Zeeman_on:
-            Zeeman_on = self.Zeeman_on   
-        if vdW_on == None and self.vdW_on:
-            vdW_on = self.vdW_on   
+        def pick(value, default):
+            return default if value is None else value
 
-        if pert == None and self.pert:
-            pert = self.pert
-        elif pert:
-            if isinstance(pert, str):
-                name, charge = parse_spectroscopic_name(pert)
-                pert = species(name, charge*const.e)
-                if T:
-                    pert.T = T
+        wl = pick(wl, self.wl)
+        plasma = pick(plasma, self.plasma)
+        instr_func = pick(instr_func, self.instr)
+        w = pick(w, self.w)
+        mu = pick(mu, self.mu)
+        T = pick(T, self.T)
+        B = pick(B, self.B)
+        ne = pick(ne, self.ne)
+        Te = pick(Te, self.Te)
+        ng = pick(ng, self.ng)
+        Instr_on = pick(Instr_on, self.Instr_on)
+        Doppler_on = pick(Doppler_on, self.Doppler_on)
+        Stark_on = pick(Stark_on, self.Stark_on)
+        Zeeman_on = pick(Zeeman_on, self.Zeeman_on)
+        vdW_on = pick(vdW_on, self.vdW_on)
 
-            elif isinstance(pert, species) or isinstance(pert, perturber):
-                pert = pert
-        
+        # self.pert is already parsed; only a per-call override needs parsing
+        pert = self.pert if pert is None else _parse_pert(pert, T)
+
         vdW_pert = None
         Stark_pert = None
 
@@ -257,18 +242,18 @@ class emission_line():
         middle_wl = x[int(len(x)/2)-1]
         components = []
 
-        if ((Doppler_on=='auto' and T) or Doppler_on==True) and not Doppler_on==False:
+        if _enabled(Doppler_on, T):
             maxwell = doppler_maxwell(x, middle_wl, T, self.m)
             self.profiles['Doppler'] = maxwell/np.max(maxwell)
             components.append(maxwell)
 
-        if ((Stark_on=='auto' and ne) or Stark_on==True) and not Stark_on==False:
+        if _enabled(Stark_on, ne):
             this_stark = stark.stark(self.transition)
             stark_profile = this_stark.get_profile(x, ne, Te, Stark_pert)
             self.profiles['Stark'] = stark_profile/np.max(stark_profile)
             components.append(stark_profile)
 
-        if ((Zeeman_on=='auto' and B) or Zeeman_on==True) and not Zeeman_on==False:
+        if _enabled(Zeeman_on, B):
             if not (B):
                 print('Missing magnetic field strength for Zeeman splitting. Skipping.')
             else:
@@ -280,7 +265,7 @@ class emission_line():
                 else:
                     print('Missing quantum numbers (J) or Lande G values for Zeeman splitting. Skipping.')
 
-        if ((vdW_on=='auto' and vdW_pert) or vdW_on==True) and not vdW_on==False:
+        if _enabled(vdW_on, vdW_pert):
             if not (vdW_pert.T and vdW_pert.n):
                 if vdW_on==True:
                     print('Missing perturber/neutral density and temperature for van der Waals broadening. Skipping.')
@@ -293,9 +278,10 @@ class emission_line():
 
         # We let the instrumental profile determine center position.
         # ALL other components are shifted to the middle!
-        if (instr_func and (Instr_on=='auto' or Instr_on==True)) and not Instr_on==False:
+        instr_enabled = _enabled(Instr_on, True)
+        if instr_func and instr_enabled:
             instrumental_profile = instr_func(x, wl+s)
-        elif w and (Instr_on=='auto' or Instr_on==True):   
+        elif w and instr_enabled:
             instrumental_profile = psd_voigt(x, wl+s, w, mu)
         else:
             instrumental_profile = gauss_function(x, wl+s, x[1]-x[0])
