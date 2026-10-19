@@ -4,6 +4,7 @@ import pandas as pd
 from .util import *
 import re
 import warnings
+import requests
 
 
 class spectrum():
@@ -40,9 +41,15 @@ class spectrum():
         try:
             from ASDCache import SpectraCache
             nist_cache = SpectraCache()
-            nist_lines = nist_cache.fetch(self.spec_name, wl_range=(wl_low, wl_high))           
-        except:
-            return []
+            nist_lines = nist_cache.fetch(self.spec_name, wl_range=(wl_low, wl_high))  
+        except Exception as e:
+            if type(e) == requests.exceptions.ConnectionError:
+                print("Connection error: do you have internet access?")
+                raise e
+            else:
+                print(e)
+                warnings.warn(f"Failed to fetch line data: {e}")
+                return []
 
         return nist_lines
 
@@ -93,6 +100,8 @@ class spectrum():
 
     def table_to_spec_LTE(self, x, nist_lines, Te, width=0.1, mu=0.5, min_int=-1, min_Aik=-1):
         spectrum = np.zeros(len(x))
+        if len(nist_lines) == 0:
+            return spectrum
 
         wl = get_wl(nist_lines)
         Aik = nist_lines['Aki(s^-1)']
@@ -120,7 +129,9 @@ class spectrum():
     
     def table_to_spec_rel(self, x, nist_lines, width=0.02, mu=0, min_int=-1, min_Aik=-1):
         spectrum = np.zeros(len(x))
-
+        if len(nist_lines) == 0:
+            return spectrum
+        
         wl = get_wl(nist_lines)
         rel_int = nist_lines['intens']
 
@@ -145,9 +156,10 @@ class spectrum():
 
         
     def table_to_ident(self, nist_lines, min_int=-1, min_Aik=-1):
-        x = []
+        x, y = [], []
         dx = 1e-6
-        y = []
+        if len(nist_lines) == 0:
+            return np.array(x), np.array(y)
 
         wl = get_wl(nist_lines)
         rel_int = nist_lines['intens']
@@ -174,10 +186,11 @@ class spectrum():
     
         
     def table_to_ident_LTE(self, nist_lines, Te, min_int=-1, min_Aik=-1):
-        x = []
+        x, y = [], []
         dx = 1e-6
-        y = []
-
+        if len(nist_lines) == 0:
+            return np.array(x), np.array(y)
+        
         wl = get_wl(nist_lines)
         rel_int = nist_lines['intens']
 
